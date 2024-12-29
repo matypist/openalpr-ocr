@@ -37,12 +37,6 @@ using namespace alpr;
 
 const std::string MAIN_WINDOW_NAME = "ALPR main window";
 
-const bool SAVE_LAST_VIDEO_STILL = false;
-const std::string LAST_VIDEO_STILL_LOCATION = "/tmp/laststill.jpg";
-const std::string WEBCAM_PREFIX = "/dev/video";
-MotionDetector motiondetector;
-bool do_motiondetection = true;
-
 /** Function Headers */
 bool detectandshow(Alpr* alpr, cv::Mat frame, std::string region, bool writeJson);
 bool is_supported_image(std::string image_file);
@@ -59,7 +53,6 @@ int main( int argc, const char** argv )
   std::vector<std::string> filenames;
   std::string configFile = "";
   bool outputJson = false;
-  int seektoms = 0;
   bool detectRegion = false;
   std::string country;
   int topn;
@@ -71,7 +64,6 @@ int main( int argc, const char** argv )
 
   
   TCLAP::ValueArg<std::string> countryCodeArg("c","country","Country code to identify (either us for USA or eu for Europe).  Default=us",false, "us" ,"country_code");
-  TCLAP::ValueArg<int> seekToMsArg("","seek","Seek to the specified millisecond in a video file. Default=0",false, 0 ,"integer_ms");
   TCLAP::ValueArg<std::string> configFileArg("","config","Path to the openalpr.conf file",false, "" ,"config_file");
   TCLAP::ValueArg<std::string> templatePatternArg("p","pattern","Attempt to match the plate number against a plate pattern (e.g., md for Maryland, ca for California)",false, "" ,"pattern code");
   TCLAP::ValueArg<int> topNArg("n","topn","Max number of possible plate numbers to return.  Default=10",false, 10 ,"topN");
@@ -80,12 +72,10 @@ int main( int argc, const char** argv )
   TCLAP::SwitchArg debugSwitch("","debug","Enable debug output.  Default=off", cmd, false);
   TCLAP::SwitchArg detectRegionSwitch("d","detect_region","Attempt to detect the region of the plate image.  [Experimental]  Default=off", cmd, false);
   TCLAP::SwitchArg clockSwitch("","clock","Measure/print the total time to process image and all plates.  Default=off", cmd, false);
-  TCLAP::SwitchArg motiondetect("", "motion", "Use motion detection on video file or stream.  Default=off", cmd, false);
 
   try
   {
     cmd.add( templatePatternArg );
-    cmd.add( seekToMsArg );
     cmd.add( topNArg );
     cmd.add( configFileArg );
     cmd.add( fileArg );
@@ -101,7 +91,6 @@ int main( int argc, const char** argv )
     filenames = fileArg.getValue();
 
     country = countryCodeArg.getValue();
-    seektoms = seekToMsArg.getValue();
     outputJson = jsonSwitch.getValue();
     debug_mode = debugSwitch.getValue();
     configFile = configFileArg.getValue();
@@ -109,7 +98,6 @@ int main( int argc, const char** argv )
     templatePattern = templatePatternArg.getValue();
     topn = topNArg.getValue();
     measureProcessingTime = clockSwitch.getValue();
-	do_motiondetection = motiondetect.getValue();
   }
   catch (TCLAP::ArgException &e)    // catch any exceptions
   {
@@ -181,70 +169,6 @@ int main( int argc, const char** argv )
 
       }
     }
-    else if (filename == "webcam" || startsWith(filename, WEBCAM_PREFIX))
-    {
-      int webcamnumber = 0;
-      
-      // If they supplied "/dev/video[number]" parse the "number" here
-      if(startsWith(filename, WEBCAM_PREFIX) && filename.length() > WEBCAM_PREFIX.length())
-      {
-        webcamnumber = atoi(filename.substr(WEBCAM_PREFIX.length()).c_str());
-      }
-      
-      int framenum = 0;
-      cv::VideoCapture cap(webcamnumber);
-      if (!cap.isOpened())
-      {
-        std::cerr << "Error opening webcam" << std::endl;
-        return 1;
-      }
-
-      while (cap.read(frame))
-      {
-        if (framenum == 0)
-          motiondetector.ResetMotionDetection(&frame);
-        detectandshow(&alpr, frame, "", outputJson);
-        sleep_ms(10);
-        framenum++;
-      }
-    }
-    else if (hasEndingInsensitive(filename, ".avi") || hasEndingInsensitive(filename, ".mp4") ||
-                                                       hasEndingInsensitive(filename, ".webm") ||
-                                                       hasEndingInsensitive(filename, ".flv") || hasEndingInsensitive(filename, ".mjpg") ||
-                                                       hasEndingInsensitive(filename, ".mjpeg") ||
-             hasEndingInsensitive(filename, ".mkv")
-        )
-    {
-      if (fileExists(filename.c_str()))
-      {
-        int framenum = 0;
-
-        cv::VideoCapture cap = cv::VideoCapture();
-        cap.open(filename);
-        cap.set(cv::CAP_PROP_POS_MSEC, seektoms);
-
-        while (cap.read(frame))
-        {
-          if (SAVE_LAST_VIDEO_STILL)
-          {
-            cv::imwrite(LAST_VIDEO_STILL_LOCATION, frame);
-          }
-          if (!outputJson)
-            std::cout << "Frame: " << framenum << std::endl;
-          
-          if (framenum == 0)
-            motiondetector.ResetMotionDetection(&frame);
-          detectandshow(&alpr, frame, "", outputJson);
-          //create a 1ms delay
-          sleep_ms(1);
-          framenum++;
-        }
-      }
-      else
-      {
-        std::cerr << "Video file not found: " << filename << std::endl;
-      }
-    }
     else if (is_supported_image(filename))
     {
       if (fileExists(filename.c_str()))
@@ -310,12 +234,7 @@ bool detectandshow( Alpr* alpr, cv::Mat frame, std::string region, bool writeJso
   getTimeMonotonic(&startTime);
 
   std::vector<AlprRegionOfInterest> regionsOfInterest;
-  if (do_motiondetection)
-  {
-	  cv::Rect rectan = motiondetector.MotionDetect(&frame);
-	  if (rectan.width>0) regionsOfInterest.push_back(AlprRegionOfInterest(rectan.x, rectan.y, rectan.width, rectan.height));
-  }
-  else regionsOfInterest.push_back(AlprRegionOfInterest(0, 0, frame.cols, frame.rows));
+  regionsOfInterest.push_back(AlprRegionOfInterest(0, 0, frame.cols, frame.rows));
   AlprResults results;
   if (regionsOfInterest.size()>0) results = alpr->recognize(frame.data, frame.elemSize(), frame.cols, frame.rows, regionsOfInterest);
 
