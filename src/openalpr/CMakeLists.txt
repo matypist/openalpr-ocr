@@ -41,6 +41,7 @@ set(lpr_source_files
  textdetection/linefinder.cpp
  pipeline_data.cpp
  cjson.c
+ motiondetector.cpp
  result_aggregator.cpp
 )
 
