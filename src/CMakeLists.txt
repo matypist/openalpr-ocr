@@ -27,10 +27,6 @@ IF (NOT CMAKE_INSTALL_VARDIR)
   SET(CMAKE_INSTALL_VARDIR "${CMAKE_INSTALL_PREFIX}/var")
 ENDIF()
 
-IF ( NOT DEFINED WITH_DAEMON )
-  SET(WITH_DAEMON ON)
-ENDIF()
-
 IF ( NOT DEFINED WITH_STATEDETECTION )
   SET(WITH_STATEDETECTION OFF)
 ENDIF()
@@ -58,11 +54,6 @@ ENDIF()
 
 if ( NOT DEFINED WITH_UTILITIES )
   SET(WITH_UTILITIES ON)
-ENDIF()
-
-IF (WIN32 AND WITH_DAEMON) 
-  MESSAGE(WARNING "Skipping alprd daemon installation, as it is not supported in Windows.")
-  SET(WITH_DAEMON OFF)
 ENDIF()
 
 IF (WIN32 AND WITH_TESTS) 
@@ -154,38 +145,12 @@ if (NOT IOS)
     ${OPENALPR_LIB}
     ${STATE_DETECTION_LIB}
     support
-    video
     ${OpenCV_LIBS}
     ${Tesseract_LIBRARIES}
     ${Extra_LIBS}
   )
 ENDIF()
 
-
-# Compile the alprd library on Unix-based OS
-IF (WITH_DAEMON)
-  ADD_EXECUTABLE( alprd  
-    daemon.cpp 
-    daemon/daemonconfig.cpp 
-    daemon/beanstalk.c 
-    daemon/beanstalk.cc 
-)
-
-  FIND_PACKAGE( CURL REQUIRED )
-  FIND_PACKAGE( log4cplus REQUIRED )
-
-  TARGET_LINK_LIBRARIES(alprd
-      ${OPENALPR_LIB}
-	  support
-      video
-	  curl
-	  ${OpenCV_LIBS}
-	  ${Tesseract_LIBRARIES}
-	  ${log4cplus_LIBRARIES}
-      ${Extra_LIBS}
-    )
-	
-ENDIF()
 
 if(WITH_UTILITIES)
 add_subdirectory(misc_utilities)
@@ -196,7 +161,6 @@ add_subdirectory(tests)
 ENDIF()
 
 add_subdirectory(openalpr)
-add_subdirectory(video)
 
 if (WITH_BINDING_JAVA) 
 add_subdirectory(bindings/java)
@@ -225,16 +189,6 @@ install (FILES      ${CMAKE_CURRENT_BINARY_DIR}/config/openalpr.conf DESTINATION
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/../config/openalpr.conf.defaults ${CMAKE_CURRENT_BINARY_DIR}/share/openalpr/config/openalpr.defaults.conf)
 install (FILES      ${CMAKE_CURRENT_BINARY_DIR}/share/openalpr/config/openalpr.defaults.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/share/openalpr/config      COMPONENT config)
-
-IF (WITH_DAEMON)
-  CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/../config/alprd.conf.user ${CMAKE_CURRENT_BINARY_DIR}/config/alprd.conf)
-  install (FILES      ${CMAKE_CURRENT_BINARY_DIR}/config/alprd.conf DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/openalpr/      COMPONENT config)
-
-  CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/../config/alprd.conf.defaults ${CMAKE_CURRENT_BINARY_DIR}/share/openalpr/config/alprd.defaults.conf)
-  install (FILES      ${CMAKE_CURRENT_BINARY_DIR}/share/openalpr/config/alprd.defaults.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/share/openalpr/config      COMPONENT config)
-
-  install (TARGETS    alprd DESTINATION  ${CMAKE_INSTALL_PREFIX}/bin)
-ENDIF()
 
 
 SET (CPACK_PACKAGE_VERSION ${OPENALPR_VERSION})

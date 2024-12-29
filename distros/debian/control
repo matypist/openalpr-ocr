@@ -58,22 +58,6 @@ Description: Command line program to operate the OpenALPR library
  This package contains a command-line program to analyze images for license
  plates.
 
-Package: openalpr-daemon
-Architecture: any
-Depends: libopenalpr2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends},
- adduser,
- beanstalkd
-Description: Daemon to run OpenALPR in the background
- OpenALPR is an open source Automatic License Plate Recognition library written
- in C++. The library analyzes images and identifies license plates. The output
- is the text representation of any license plate characters found in the image.
- .
- The OpenALPR daemon allows you to monitor a camera stream for license plate
- numbers in the background. Alprd runs as a daemon process on Linux.
- .
- The plate numbers can be streamed to another server (via HTTP posts) or can be
- consumed programmatically via a beanstalkd queue.
-
 Package: openalpr-utils
 Section: utils
 Architecture: any

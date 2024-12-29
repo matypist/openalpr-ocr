@@ -12,11 +12,6 @@ Summary:  OpenALPR miscellaneous utilities
 %description utils
 OpenALPR miscellaneous utilities
 
-%package daemon
-Summary:  OpenALPR Daemon
-%description daemon
-OpenALPR daemon runs license plate recognition in the background
-
 %package -n libopenalpr-devel
 Summary:  OpenALPR Development headers
 %description -n libopenalpr-devel
@@ -92,11 +87,6 @@ rm -rf $RPM_BUILD_ROOT
 %files utils
 %defattr(-,root,root,-)
   /usr/bin/openalpr-utils-*
-
-%files daemon
-%defattr(-,root,root,-)
-  /etc/openalpr/alprd.conf
-  /usr/bin/alprd
 
 %files -n libopenalpr-devel
 %defattr(-,root,root,-)

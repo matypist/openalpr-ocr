@@ -30,7 +30,6 @@
 #include "support/filesystem.h"
 #include "support/timing.h"
 #include "support/platform.h"
-#include "video/videobuffer.h"
 #include "motiondetector.h"
 #include "alpr.h"
 
@@ -208,37 +207,6 @@ int main( int argc, const char** argv )
         sleep_ms(10);
         framenum++;
       }
-    }
-    else if (startsWith(filename, "http://") || startsWith(filename, "https://"))
-    {
-      int framenum = 0;
-
-      VideoBuffer videoBuffer;
-
-      videoBuffer.connect(filename, 5);
-
-      cv::Mat latestFrame;
-
-      while (program_active)
-      {
-        std::vector<cv::Rect> regionsOfInterest;
-        int response = videoBuffer.getLatestFrame(&latestFrame, regionsOfInterest);
-
-        if (response != -1)
-        {
-          if (framenum == 0)
-            motiondetector.ResetMotionDetection(&latestFrame);
-          detectandshow(&alpr, latestFrame, "", outputJson);
-        }
-
-        // Sleep 10ms
-        sleep_ms(10);
-        framenum++;
-      }
-
-      videoBuffer.disconnect();
-
-      std::cout << "Video processing ended" << std::endl;
     }
     else if (hasEndingInsensitive(filename, ".avi") || hasEndingInsensitive(filename, ".mp4") ||
                                                        hasEndingInsensitive(filename, ".webm") ||
